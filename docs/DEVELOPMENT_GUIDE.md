@@ -149,7 +149,14 @@ fix(hardware): clamp arm joint ranges
 
 ### 5.2 网络与登录
 
-默认登录信息只用于实验环境，生产或展示环境必须改密：
+默认登录信息只用于实验环境，生产或展示环境必须改密。当前制卡工具中的网络接口配置如下：
+
+| 网口 | IP 地址 | 子网掩码 | 默认网关 | 首选 DNS | 备用 DNS | 用途 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `ETH1` | `192.168.137.100` | `255.255.255.0` | 留空 | `8.8.8.8` | `114.114.114.114` | 通过 RJ45 网线远程登录开发板 |
+| `Type-C` | `192.168.0.2` | `255.255.255.0` | `192.168.0.1` | `8.8.8.8` | `114.114.114.114` | 通过 Type-C 数据线远程登录开发板 |
+
+登录地址约定：
 
 | 场景 | 默认地址 | 登录用户 | 默认密码 |
 | --- | --- | --- | --- |
@@ -163,7 +170,12 @@ fix(hardware): clamp arm joint ranges
 - 后端配置项命名：
 
 ```text
+ATLAS_NET_IFACE=ETH1
 ATLAS_HOST=192.168.137.100
+ATLAS_NETMASK=255.255.255.0
+ATLAS_GATEWAY=
+ATLAS_DNS_PRIMARY=8.8.8.8
+ATLAS_DNS_SECONDARY=114.114.114.114
 ATLAS_SSH_USER=root
 ATLAS_SSH_PORT=22
 ATLAS_API_BASE=http://192.168.137.100
@@ -416,6 +428,13 @@ GET /api/v1/system/status
   "atlas": {
     "online": true,
     "host": "192.168.137.100",
+    "network": {
+      "iface": "ETH1",
+      "ip_address": "192.168.137.100",
+      "netmask": "255.255.255.0",
+      "gateway": null,
+      "dns": ["8.8.8.8", "114.114.114.114"]
+    },
     "os": "ubuntu-22.04",
     "npu_available": true
   },
@@ -1008,7 +1027,12 @@ error_code
 APP_ENV=development
 APP_PORT=8080
 
+ATLAS_NET_IFACE=ETH1
 ATLAS_HOST=192.168.137.100
+ATLAS_NETMASK=255.255.255.0
+ATLAS_GATEWAY=
+ATLAS_DNS_PRIMARY=8.8.8.8
+ATLAS_DNS_SECONDARY=114.114.114.114
 ATLAS_SSH_USER=root
 ATLAS_SSH_PORT=22
 
