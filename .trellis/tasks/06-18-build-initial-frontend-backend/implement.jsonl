@@ -1,0 +1,5 @@
+{"file":"docs/PRD.md","reason":"Primary product requirements, architecture, API list, milestones, and acceptance criteria for the smart arm system."}
+{"file":"docs/DEVELOPMENT_GUIDE.md","reason":"Authoritative development guide for API contracts, units, safety constraints, mock behavior, testing, and frontend/backend boundaries."}
+{"file":".trellis/spec/backend/index.md","reason":"Backend spec entry point for project-specific backend conventions."}
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend spec entry point for project-specific frontend conventions."}
+{"file":".trellis/spec/guides/index.md","reason":"Cross-layer implementation guidance for coordinating frontend, backend, and contracts."}

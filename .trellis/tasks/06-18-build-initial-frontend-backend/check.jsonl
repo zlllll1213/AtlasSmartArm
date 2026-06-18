@@ -1,0 +1,5 @@
+{"file":"docs/PRD.md","reason":"Check the implementation against product requirements, module boundaries, and acceptance criteria."}
+{"file":"docs/DEVELOPMENT_GUIDE.md","reason":"Verify API responses, units, error codes, mock scenarios, and testing expectations."}
+{"file":".trellis/spec/backend/index.md","reason":"Review backend code against project-specific backend guidelines."}
+{"file":".trellis/spec/frontend/index.md","reason":"Review frontend code against project-specific frontend guidelines."}
+{"file":".trellis/spec/guides/index.md","reason":"Review cross-layer consistency between OpenAPI, backend, frontend, and tests."}

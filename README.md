@@ -47,3 +47,56 @@
 │   ├── integration/       # 识别与抓取闭环控制逻辑
 │   └── backend/           # 可视化系统后端代码
 └── frontend/              # 可视化系统前端界面
+```
+
+---
+
+## 首版可运行骨架
+
+当前仓库已经包含一个无硬件可运行的 Mock 前后端：
+
+* 后端：`FastAPI`，位于 `src/backend/`，包含统一响应格式、错误码、Mock 视觉/机械臂/任务/库存服务。
+* 前端：`React + TypeScript + Vite`，位于 `frontend/`，通过统一 API client 调用后端。
+* 接口契约：`docs/api/openapi.yaml`。
+* 测试：`tests/contract/` 与 `tests/unit/` 覆盖后端契约、坐标转换和任务状态机；`frontend/src/api/client.test.ts` 覆盖前端 API 解包。
+
+### 后端启动
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m uvicorn src.backend.main:app --host 0.0.0.0 --port 8080 --reload
+```
+
+或使用脚本：
+
+```bash
+./scripts/run_backend.sh
+```
+
+### 前端启动
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+或使用脚本：
+
+```bash
+./scripts/run_frontend.sh
+```
+
+前端默认访问 `http://localhost:5173`，后端默认访问 `http://localhost:8080`。如需修改后端地址，可在前端设置：
+
+```bash
+VITE_API_BASE_URL=http://localhost:8080 npm run dev
+```
+
+### 验证命令
+
+```bash
+.venv/bin/python -m pytest
+cd frontend && npm test && npm run build
+```

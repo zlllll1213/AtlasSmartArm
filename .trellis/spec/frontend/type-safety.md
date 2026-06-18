@@ -6,46 +6,39 @@
 
 ## Overview
 
-<!--
-Document your project's type safety conventions here.
-
-Questions to answer:
-- What type system do you use?
-- How are types organized?
-- What validation library do you use?
-- How do you handle type inference?
--->
-
-(To be filled by the team)
+The frontend uses strict TypeScript. API-facing types live in one file and are
+kept aligned with `docs/api/openapi.yaml` and backend Pydantic models.
 
 ---
 
 ## Type Organization
 
-<!-- Where types are defined, shared types vs local types -->
-
-(To be filled by the team)
+- Put shared API types in `frontend/src/api/types.ts`.
+- Keep component prop types next to the component when they are only used once.
+- Use stable string-union types for backend enums such as task states, material
+  categories, and error codes.
 
 ---
 
 ## Validation
 
-<!-- Runtime validation patterns (Zod, Yup, io-ts, etc.) -->
-
-(To be filled by the team)
+Runtime validation is currently performed by the backend. The frontend unwraps
+the unified API envelope and throws `ApiError` when `success=false` or `error`
+is present.
 
 ---
 
 ## Common Patterns
 
-<!-- Type utilities, generics, type guards -->
-
-(To be filled by the team)
+- Use `ApiResponse<T>` and `unwrapResponse<T>()` for all REST responses.
+- Use `SystemEvent` for WebSocket events and treat REST as the source of truth.
+- Prefer explicit return types for API client methods when the shape is used by
+  multiple components.
 
 ---
 
 ## Forbidden Patterns
 
-<!-- any, type assertions, etc. -->
-
-(To be filled by the team)
+- Do not use `any` for backend data.
+- Do not construct API request or response shapes inside components.
+- Do not rename unit-bearing backend fields for presentation convenience.

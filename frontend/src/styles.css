@@ -1,0 +1,367 @@
+:root {
+  color-scheme: light;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #eef1f3;
+  color: #182025;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button {
+  align-items: center;
+  background: #182025;
+  border: 1px solid #182025;
+  border-radius: 6px;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 650;
+  gap: 0.45rem;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 0.8rem;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.app-shell {
+  margin: 0 auto;
+  max-width: 1440px;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.topbar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.topbar h1 {
+  font-size: clamp(1.8rem, 3vw, 2.7rem);
+  line-height: 1;
+  margin: 0;
+}
+
+.topbar p {
+  color: #63707a;
+  margin: 0.42rem 0 0;
+}
+
+.topbar-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.topbar-actions span {
+  color: #52616b;
+  font-size: 0.9rem;
+}
+
+.dashboard-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.panel {
+  background: #ffffff;
+  border: 1px solid #dce3e8;
+  border-radius: 8px;
+  min-height: 220px;
+  padding: 18px;
+}
+
+.panel-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.panel-heading h2 {
+  font-size: 1rem;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.panel-heading span {
+  color: #63707a;
+  font-size: 0.84rem;
+}
+
+.status-panel,
+.inventory-panel {
+  grid-column: span 6;
+}
+
+.arm-panel,
+.task-panel,
+.event-panel {
+  grid-column: span 3;
+}
+
+.vision-panel {
+  grid-column: span 6;
+}
+
+.status-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.status-cell {
+  align-items: center;
+  border: 1px solid #e2e8ed;
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  min-height: 76px;
+  padding: 12px;
+}
+
+.status-cell strong,
+.status-cell span {
+  display: block;
+}
+
+.status-cell svg {
+  color: #0f766e;
+  flex: 0 0 auto;
+}
+
+.state-ok {
+  color: #0f766e;
+}
+
+.state-bad {
+  color: #b42318;
+}
+
+.icon-button {
+  aspect-ratio: 1;
+  min-height: 36px;
+  padding: 0;
+  width: 36px;
+}
+
+.detail-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.detail-list div {
+  border-bottom: 1px solid #e5ebef;
+  display: grid;
+  gap: 4px;
+  padding-bottom: 10px;
+}
+
+.detail-list dt {
+  color: #63707a;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.detail-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.camera-frame {
+  aspect-ratio: 4 / 3;
+  background:
+    linear-gradient(90deg, rgba(15, 118, 110, 0.12) 1px, transparent 1px),
+    linear-gradient(rgba(15, 118, 110, 0.12) 1px, transparent 1px), #122023;
+  background-size: 40px 40px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bbox {
+  border: 2px solid #ffb000;
+  border-radius: 6px;
+  position: absolute;
+}
+
+.bbox span {
+  background: #ffb000;
+  border-radius: 0 0 4px 0;
+  color: #1d1600;
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 6px;
+}
+
+.task-current {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.task-current strong {
+  overflow-wrap: anywhere;
+}
+
+.task-current span {
+  color: #63707a;
+}
+
+.progress-track {
+  background: #e4eaef;
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  background: #0f766e;
+  height: 100%;
+  transition: width 180ms ease;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.danger {
+  background: #b42318;
+  border-color: #b42318;
+}
+
+.inventory-table {
+  display: grid;
+  gap: 6px;
+}
+
+.table-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1.2fr 1fr 64px 1fr 92px;
+  min-height: 44px;
+}
+
+.table-row span {
+  overflow-wrap: anywhere;
+}
+
+.table-head {
+  color: #63707a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.table-row button {
+  min-height: 34px;
+}
+
+.event-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.event-list li {
+  border-bottom: 1px solid #e5ebef;
+  display: grid;
+  gap: 4px;
+  padding-bottom: 8px;
+}
+
+.event-list strong {
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
+.event-list span {
+  color: #63707a;
+  font-size: 0.78rem;
+}
+
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1080px) {
+  .status-panel,
+  .vision-panel,
+  .inventory-panel {
+    grid-column: span 12;
+  }
+
+  .arm-panel,
+  .task-panel,
+  .event-panel {
+    grid-column: span 4;
+  }
+
+  .status-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    padding: 16px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .topbar,
+  .topbar-actions {
+    flex-direction: column;
+  }
+
+  .arm-panel,
+  .task-panel,
+  .event-panel {
+    grid-column: span 12;
+  }
+
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-row {
+    align-items: start;
+    grid-template-columns: 1fr;
+    padding: 10px 0;
+  }
+}

@@ -1,0 +1,570 @@
+openapi: 3.1.0
+info:
+  title: AtlasSmartArm API
+  version: 0.1.0
+  description: REST contract for the Atlas 200I DK smart arm power O&M and warehouse management system.
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/v1/health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: Backend health
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/system/status:
+    get:
+      summary: System status
+      responses:
+        "200":
+          description: Atlas, camera, arm, vision, and calibration status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/vision/detect:
+    post:
+      summary: Trigger target detection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisionDetectRequest"
+      responses:
+        "200":
+          description: Detection result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/calibration/status:
+    get:
+      summary: Calibration status
+      responses:
+        "200":
+          description: Calibration readiness
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/calibration/offset:
+    put:
+      summary: Update grasping offset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalibrationOffsetRequest"
+      responses:
+        "200":
+          description: Updated calibration offset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/arm/kinematics/fk:
+    post:
+      summary: Forward kinematics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [joints]
+              properties:
+                joints:
+                  $ref: "#/components/schemas/JointAngles"
+      responses:
+        "200":
+          description: Pose in arm base coordinates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/arm/kinematics/ik:
+    post:
+      summary: Inverse kinematics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pose]
+              properties:
+                pose:
+                  $ref: "#/components/schemas/ArmPose"
+      responses:
+        "200":
+          description: Joint target and reachability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/arm/move:
+    post:
+      summary: Safe arm movement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoveRequest"
+      responses:
+        "200":
+          description: Move validation or execution result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/arm/emergency-stop:
+    post:
+      summary: Emergency stop
+      responses:
+        "200":
+          description: Emergency stop accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/tasks/pick-sort:
+    post:
+      summary: Create pick-sort task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PickSortRequest"
+      responses:
+        "200":
+          description: Created task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/tasks/stack:
+    post:
+      summary: Create stacking task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StackRequest"
+      responses:
+        "200":
+          description: Created task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/tasks/{task_id}:
+    get:
+      summary: Get task detail
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/tasks/{task_id}/cancel:
+    post:
+      summary: Cancel task
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cancelled task detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/inventory/items:
+    get:
+      summary: List inventory items
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Inventory page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+    post:
+      summary: Create inventory item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InventoryItemCreate"
+      responses:
+        "200":
+          description: Created item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/inventory/items/{item_id}:
+    get:
+      summary: Get inventory item
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Inventory item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+    put:
+      summary: Update inventory item
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InventoryItemUpdate"
+      responses:
+        "200":
+          description: Updated item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/inventory/inbound:
+    post:
+      summary: Add stock quantity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockMovementRequest"
+      responses:
+        "200":
+          description: Updated stock
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/inventory/outbound:
+    post:
+      summary: Remove stock quantity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockMovementRequest"
+      responses:
+        "200":
+          description: Updated stock
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /api/v1/inventory/audit:
+    post:
+      summary: Audit inventory count
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuditRequest"
+      responses:
+        "200":
+          description: Audit result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+components:
+  schemas:
+    ApiResponse:
+      type: object
+      required: [request_id, success, data, error]
+      properties:
+        request_id:
+          type: string
+        success:
+          type: boolean
+        data:
+          type:
+            - object
+            - "null"
+        error:
+          oneOf:
+            - $ref: "#/components/schemas/ApiError"
+            - type: "null"
+    ApiError:
+      type: object
+      required: [code, message, details]
+      properties:
+        code:
+          $ref: "#/components/schemas/ErrorCode"
+        message:
+          type: string
+        details:
+          type: object
+    ErrorCode:
+      type: string
+      enum:
+        - INVALID_ARGUMENT
+        - OUT_OF_RANGE
+        - UNAUTHORIZED
+        - FORBIDDEN
+        - NOT_FOUND
+        - ARM_BUSY
+        - CALIBRATION_REQUIRED
+        - DEVICE_OFFLINE
+        - VISION_UNAVAILABLE
+        - KINEMATICS_FAILED
+        - MODEL_NOT_LOADED
+        - TASK_TIMEOUT
+        - INTERNAL
+    MaterialCategory:
+      type: string
+      enum:
+        - electronic_component
+        - power_fitting
+        - tool
+        - consumable
+        - unknown
+    JointAngles:
+      type: object
+      required: [joint1_deg, joint2_deg, joint3_deg, joint4_deg, joint5_deg, joint6_deg]
+      properties:
+        joint1_deg:
+          type: number
+        joint2_deg:
+          type: number
+        joint3_deg:
+          type: number
+        joint4_deg:
+          type: number
+        joint5_deg:
+          type: number
+        joint6_deg:
+          type: number
+    ArmPose:
+      type: object
+      required: [x_m, y_m, z_m, roll_rad, pitch_rad, yaw_rad]
+      properties:
+        x_m:
+          type: number
+        y_m:
+          type: number
+        z_m:
+          type: number
+        roll_rad:
+          type: number
+        pitch_rad:
+          type: number
+        yaw_rad:
+          type: number
+    MoveRequest:
+      type: object
+      required: [target, duration_ms, dry_run]
+      properties:
+        target:
+          type: object
+          required: [type]
+          properties:
+            type:
+              type: string
+              enum: [joints, pose]
+            joints:
+              $ref: "#/components/schemas/JointAngles"
+            pose:
+              $ref: "#/components/schemas/ArmPose"
+        duration_ms:
+          type: integer
+          minimum: 100
+          maximum: 3000
+        dry_run:
+          type: boolean
+    VisionDetectRequest:
+      type: object
+      required: [source, camera_index, save_frame]
+      properties:
+        source:
+          type: string
+          enum: [camera, sample]
+        camera_index:
+          type: integer
+        save_frame:
+          type: boolean
+    CalibrationOffsetRequest:
+      type: object
+      required: [x_offset_m, y_offset_m, reason]
+      properties:
+        x_offset_m:
+          type: number
+        y_offset_m:
+          type: number
+        reason:
+          type: string
+    TaskTarget:
+      type: object
+      required: [mode, labels]
+      properties:
+        mode:
+          type: string
+          enum: [auto_detect, manual_select]
+        labels:
+          type: array
+          items:
+            type: string
+    PickSortRequest:
+      type: object
+      required: [target, destination]
+      properties:
+        target:
+          $ref: "#/components/schemas/TaskTarget"
+        destination:
+          type: object
+          required: [type, category]
+          properties:
+            type:
+              type: string
+              enum: [category_bin, location]
+            category:
+              $ref: "#/components/schemas/MaterialCategory"
+        options:
+          $ref: "#/components/schemas/TaskOptions"
+    StackRequest:
+      type: object
+      required: [target, stack]
+      properties:
+        target:
+          $ref: "#/components/schemas/TaskTarget"
+        stack:
+          type: object
+          required: [slot_id, max_layers]
+          properties:
+            slot_id:
+              type: string
+            max_layers:
+              type: integer
+              minimum: 1
+              maximum: 8
+        options:
+          $ref: "#/components/schemas/TaskOptions"
+    TaskOptions:
+      type: object
+      properties:
+        dry_run:
+          type: boolean
+        max_retry:
+          type: integer
+          minimum: 0
+          maximum: 5
+    InventoryLocation:
+      type: object
+      required: [area, shelf, slot]
+      properties:
+        area:
+          type: string
+        shelf:
+          type: string
+        slot:
+          type: string
+    InventoryItemCreate:
+      type: object
+      required: [name, category, label, quantity, location]
+      properties:
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/MaterialCategory"
+        label:
+          type: string
+        quantity:
+          type: integer
+          minimum: 0
+        location:
+          $ref: "#/components/schemas/InventoryLocation"
+    InventoryItemUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/MaterialCategory"
+        label:
+          type: string
+        quantity:
+          type: integer
+          minimum: 0
+        location:
+          $ref: "#/components/schemas/InventoryLocation"
+    StockMovementRequest:
+      type: object
+      required: [item_id, quantity, operator, reason]
+      properties:
+        item_id:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        operator:
+          type: string
+        reason:
+          type: string
+    AuditRequest:
+      type: object
+      required: [item_id, counted_quantity, operator, reason]
+      properties:
+        item_id:
+          type: string
+        counted_quantity:
+          type: integer
+          minimum: 0
+        operator:
+          type: string
+        reason:
+          type: string
