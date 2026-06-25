@@ -12,13 +12,14 @@ __pycache__/
 frontend/vite.config.d.ts
 frontend/vite.config.js
 
-# Local agent/tool configuration. AGENTS.md is intentionally tracked as the
-# project-level instruction file; personal Claude/Agent files stay local.
+# Local agent/tool configuration.
 .claude/
+AGENTS.md
 CLAUDE.md
 Claude.md
 Agent.md
 agent.md
+design-qa.md
 
 # Generated demo outputs and local captures/models.
 outputs/

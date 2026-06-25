@@ -1,6 +1,10 @@
 # Developer identity (local only)
 .developer
 
+# Local AI session journals and injected context.
+workspace/
+tasks/*/*.jsonl
+
 # Current task pointer (each dev works on different task)
 .current-task
 
