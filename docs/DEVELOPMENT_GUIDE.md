@@ -206,13 +206,13 @@ new msg is [('Book', (0.012, 0.321))]
 
 ## 7. API 契约
 
-`docs/api/openapi.yaml` 是 HTTP API 的事实来源。接口变更流程：
+`docs/api/openapi.yaml` 记录当前后端 HTTP API，必须和 `src/backend/api/routes.py`、Pydantic request model、前端 `frontend/src/api/client.ts` 保持一致。接口变更流程：
 
 ```text
 更新 OpenAPI -> 更新后端实现 -> 更新前端类型 -> 更新测试 -> 运行验证 -> 提交
 ```
 
-当前主要接口：
+当前真机 demo 主链路：
 
 - `GET /api/v1/health`
 - `GET /api/v1/system/status`
@@ -224,7 +224,27 @@ new msg is [('Book', (0.012, 0.321))]
 - `GET /api/v1/camera/preview.mjpg`
 - `POST /api/v1/camera/preview/stop`
 - `POST /api/v1/camera/captures`
+- `GET /api/v1/camera/captures/{capture_id}/image`
 - `WS /ws/v1/events`
+
+后端同时保留以下辅助 HTTP 接口，用于 mock、契约测试和后续扩展。文档或 UI 不得把它们描述成当前真机库存闭环：
+
+- `POST /api/v1/vision/detect`
+- `GET /api/v1/calibration/status`
+- `PUT /api/v1/calibration/offset`
+- `POST /api/v1/arm/kinematics/fk`
+- `POST /api/v1/arm/kinematics/ik`
+- `POST /api/v1/arm/move`
+- `POST /api/v1/arm/emergency-stop`
+- `GET /api/v1/inventory/items`
+- `POST /api/v1/inventory/items`
+- `GET /api/v1/inventory/items/{item_id}`
+- `PUT /api/v1/inventory/items/{item_id}`
+- `POST /api/v1/inventory/inbound`
+- `POST /api/v1/inventory/outbound`
+- `POST /api/v1/inventory/audit`
+
+注意：`/api/v1/arm/emergency-stop` 当前只是后端软件状态接口；没有接入独立硬件急停前，前端和文档都不能把它作为真实急停能力承诺。
 
 ## 8. 测试策略
 
@@ -265,12 +285,10 @@ npm run build
 
 ```bash
 # board
-cd /root/AtlasSmartArm-board-demo
-PROGRAM_MODE=board python3 -m uvicorn src.backend.main:app --host 0.0.0.0 --port 8080
+./scripts/run_board_backend.sh
 
 # local
-cd frontend
-VITE_API_BASE_URL=http://192.168.137.100:8080 npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
+./scripts/run_frontend_board.sh
 ```
 
 检查：
@@ -288,6 +306,7 @@ VITE_API_BASE_URL=http://192.168.137.100:8080 npm run dev -- --host 127.0.0.1 --
 - 功能开发使用 `codex/` 前缀分支。
 - 提交前运行相关测试。
 - 不提交密码、模型大文件、拍照样本和本地缓存。
+- 不提交本地 Agent/Claude 配置和生成产物，例如 `.claude/`、`CLAUDE.md`、`Agent.md`、`outputs/`。
 - 合并到 `main` 前确认工作区干净。
 - 推送 `main` 前确认本地 `main` 已包含目标分支提交。
 

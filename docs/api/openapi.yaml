@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: AtlasSmartArm API
   version: 0.1.0
-  description: REST contract for the Atlas 200I DK smart arm power O&M and warehouse management system.
+  description: HTTP contract for the Atlas 200I DK smart arm demo backend. The current board demo uses task, camera, status, and event-stream flows; auxiliary vision, calibration, arm, and in-memory inventory endpoints are retained for mock workflows and future extension.
 servers:
   - url: http://localhost:8080
 paths:
@@ -473,43 +473,55 @@ components:
           type: number
     MoveRequest:
       type: object
-      required: [target, duration_ms, dry_run]
+      required: [target]
       properties:
         target:
-          type: object
-          required: [type]
-          properties:
-            type:
-              type: string
-              enum: [joints, pose]
-            joints:
-              $ref: "#/components/schemas/JointAngles"
-            pose:
-              $ref: "#/components/schemas/ArmPose"
+          $ref: "#/components/schemas/MoveTarget"
         duration_ms:
           type: integer
           minimum: 100
           maximum: 3000
+          default: 1000
         dry_run:
           type: boolean
+          default: false
+    MoveTarget:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [joints, pose]
+        joints:
+          oneOf:
+            - $ref: "#/components/schemas/JointAngles"
+            - type: "null"
+        pose:
+          oneOf:
+            - $ref: "#/components/schemas/ArmPose"
+            - type: "null"
     VisionDetectRequest:
       type: object
-      required: [source, camera_index, save_frame]
       properties:
         source:
           type: string
           enum: [camera, sample]
+          default: camera
         camera_index:
           type: integer
+          default: 0
         save_frame:
           type: boolean
+          default: false
     CameraCaptureRequest:
       type: object
+      additionalProperties: false
       properties:
         label:
           type:
             - string
             - "null"
+          minLength: 1
           maxLength: 80
     CameraCapture:
       type: object
@@ -543,21 +555,27 @@ components:
           type: string
     CalibrationOffsetRequest:
       type: object
+      additionalProperties: false
       required: [x_offset_m, y_offset_m, reason]
       properties:
         x_offset_m:
           type: number
+          minimum: -0.05
+          maximum: 0.05
         y_offset_m:
           type: number
+          minimum: -0.05
+          maximum: 0.05
         reason:
           type: string
+          minLength: 1
     TaskTarget:
       type: object
-      required: [mode, labels]
       properties:
         mode:
           type: string
           enum: [auto_detect, manual_select]
+          default: auto_detect
         labels:
           type: array
           items:
@@ -587,7 +605,7 @@ components:
           $ref: "#/components/schemas/TaskTarget"
         stack:
           type: object
-          required: [slot_id, max_layers]
+          required: [slot_id]
           properties:
             slot_id:
               type: string
@@ -595,6 +613,7 @@ components:
               type: integer
               minimum: 1
               maximum: 8
+              default: 3
         options:
           $ref: "#/components/schemas/TaskOptions"
     TaskOptions:
@@ -602,10 +621,12 @@ components:
       properties:
         dry_run:
           type: boolean
+          default: false
         max_retry:
           type: integer
           minimum: 0
           maximum: 5
+          default: 1
     TaskState:
       type: string
       enum: [queued, detecting, planning, moving, verifying, succeeded, failed, cancelled, paused]
@@ -748,33 +769,46 @@ components:
           type: string
     InventoryItemCreate:
       type: object
-      required: [name, category, label, quantity, location]
+      required: [name, category, label, location]
       properties:
         name:
           type: string
+          minLength: 1
         category:
           $ref: "#/components/schemas/MaterialCategory"
         label:
           type: string
+          minLength: 1
         quantity:
           type: integer
           minimum: 0
+          default: 0
         location:
           $ref: "#/components/schemas/InventoryLocation"
     InventoryItemUpdate:
       type: object
       properties:
         name:
-          type: string
+          type:
+            - string
+            - "null"
         category:
-          $ref: "#/components/schemas/MaterialCategory"
+          oneOf:
+            - $ref: "#/components/schemas/MaterialCategory"
+            - type: "null"
         label:
-          type: string
+          type:
+            - string
+            - "null"
         quantity:
-          type: integer
-          minimum: 0
+          oneOf:
+            - type: integer
+              minimum: 0
+            - type: "null"
         location:
-          $ref: "#/components/schemas/InventoryLocation"
+          oneOf:
+            - $ref: "#/components/schemas/InventoryLocation"
+            - type: "null"
     StockMovementRequest:
       type: object
       required: [item_id, quantity, operator, reason]
@@ -786,8 +820,10 @@ components:
           minimum: 1
         operator:
           type: string
+          minLength: 1
         reason:
           type: string
+          minLength: 1
     AuditRequest:
       type: object
       required: [item_id, counted_quantity, operator, reason]
@@ -799,5 +835,7 @@ components:
           minimum: 0
         operator:
           type: string
+          minLength: 1
         reason:
           type: string
+          minLength: 1

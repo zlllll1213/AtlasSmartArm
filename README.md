@@ -48,6 +48,7 @@ Board default ROS2 programs
 ├── README.md
 ├── docs/
 │   ├── DEVELOPMENT_GUIDE.md
+│   ├── MODEL_TRAINING.md
 │   ├── PRD.md
 │   └── api/openapi.yaml
 ├── frontend/
@@ -168,10 +169,11 @@ new msg is [('Book', (0.012, 0.321))]
 - `other`：Cigarette_butts, Toilet_paper, Disposable_chopsticks
 - 未知标签：`unknown`
 
-## 主要接口
+## 接口边界
 
-完整接口以 [docs/api/openapi.yaml](docs/api/openapi.yaml) 为准。
+完整 HTTP 契约以 [docs/api/openapi.yaml](docs/api/openapi.yaml) 为准，WebSocket 事件流为 `WS /ws/v1/events`。当前真机 demo 主链路只依赖任务、相机和状态接口：
 
+- `GET /api/v1/health`
 - `GET /api/v1/system/status`
 - `POST /api/v1/tasks/pick-sort`
 - `POST /api/v1/tasks/stack`
@@ -181,7 +183,10 @@ new msg is [('Book', (0.012, 0.321))]
 - `GET /api/v1/camera/preview.mjpg`
 - `POST /api/v1/camera/preview/stop`
 - `POST /api/v1/camera/captures`
+- `GET /api/v1/camera/captures/{capture_id}/image`
 - `WS /ws/v1/events`
+
+后端还实现了用于本地开发、契约测试和后续扩展的辅助接口，包括 `POST /api/v1/vision/detect`、标定接口、机械臂 FK/IK/移动校验接口、软件态 `POST /api/v1/arm/emergency-stop`，以及内存态库存 CRUD/出入库/盘点接口。它们在 OpenAPI 中保留，但当前真机 demo 不把默认程序日志自动写成库存结果，也不把软件态 emergency-stop 等同于独立硬件急停。
 
 ## 验证命令
 
@@ -209,6 +214,7 @@ bash -lc '. /usr/local/Ascend/ascend-toolkit/set_env.sh && . ./setenv.sh && pyth
 ## 安全约束
 
 - 仓库中不保存 SSH 密码、token、密钥或开发板私有凭据。
+- 不提交本地 Agent/Claude 配置、生成演示产物、拍照样本或模型权重，例如 `.claude/`、`CLAUDE.md`、`Agent.md`、`outputs/`、`data/captures/`、`*.pt`、`*.onnx`、`*.om`。
 - 不在默认程序任务运行中打开额外摄像头流。
 - 不把默认程序日志推断成真实库存变更。
 - 不直接从前端下发舵机底层控制指令。
