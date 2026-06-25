@@ -227,11 +227,10 @@ cd /home/HwHiAiUser/E2ESamples/src/E2E-Sample/ros2_robot_arm
 bash -lc '. /usr/local/Ascend/ascend-toolkit/set_env.sh && . ./setenv.sh && python3 -c "import aclruntime; print(\"aclruntime import ok\")"'
 ```
 
-## 安全约束
+## 文档导航
 
-- 仓库中不保存 SSH 密码、token、密钥或开发板私有凭据。
-- 不提交本地 Agent/Claude 配置、生成演示产物、拍照样本或模型权重，例如 `.claude/`、`CLAUDE.md`、`Agent.md`、`outputs/`、`data/captures/`、`*.pt`、`*.onnx`、`*.om`。
-- 不在默认程序任务运行中打开额外摄像头流。
-- 不把默认程序日志推断成真实库存变更。
-- 不直接从前端下发舵机底层控制指令。
-- 合并和推送前必须确认测试通过、工作区无无关改动。
+- [产品需求文档](docs/PRD.md)：真机 demo 范围、用户场景、验收清单和后续迭代。
+- [开发指南](docs/DEVELOPMENT_GUIDE.md)：架构边界、运行模式、任务服务、摄像头策略、测试和 Git 工作流。
+- [模型训练与部署说明](docs/MODEL_TRAINING.md)：16 类垃圾检测模型的数据准备、训练、导出、转换和开发板部署流程。
+- [模型训练参数记录](docs/TRAINING_PARAMETERS.md)：本次 YOLOv5s 训练、ONNX 导出、ATC 转 OM 的实际参数和结果。
+- [OpenAPI 契约](docs/api/openapi.yaml)：当前 FastAPI 后端 HTTP 接口定义。
