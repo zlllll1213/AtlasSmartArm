@@ -47,6 +47,12 @@ class VisionDetectRequest(BaseModel):
     save_frame: bool = False
 
 
+class CameraCaptureRequest(BaseModel):
+    label: str | None = Field(default=None, min_length=1, max_length=80)
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class FKRequest(BaseModel):
     joints: JointAngles
 

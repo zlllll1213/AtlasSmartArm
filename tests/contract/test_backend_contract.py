@@ -144,6 +144,32 @@ class FailingProgramRunner:
         raise RuntimeError("ros2 launch failed")
 
 
+class FakeCameraSession:
+    def __init__(self, *, stop_after_first_frame: bool = False) -> None:
+        self.released = False
+        self.read_count = 0
+        self.stop_after_first_frame = stop_after_first_frame
+
+    def read_jpeg(self):
+        if self.stop_after_first_frame and self.read_count >= 1:
+            raise StopIteration
+        self.read_count += 1
+        return b"\xff\xd8fake-jpeg\xff\xd9", 320, 240
+
+    def release(self) -> None:
+        self.released = True
+
+
+class FakeCameraBackend:
+    def __init__(self, *, stop_after_first_frame: bool = False) -> None:
+        self.open_calls: list[tuple[int, int, int]] = []
+        self.session = FakeCameraSession(stop_after_first_frame=stop_after_first_frame)
+
+    def open(self, *, index: int, width: int, height: int):
+        self.open_calls.append((index, width, height))
+        return self.session
+
+
 def test_board_mode_pick_sort_starts_default_ros_program():
     runner = FakeProgramRunner()
     board_client = TestClient(
@@ -386,6 +412,113 @@ def test_board_mode_failed_program_start_does_not_leave_active_task():
     status = unwrap_ok(board_client.get("/api/v1/system/status"))
 
     assert status["active_task_id"] is None
+
+
+def test_camera_capture_saves_labeled_photo(tmp_path):
+    camera_backend = FakeCameraBackend()
+    camera_client = TestClient(
+        create_app(
+            Settings(program_mode="board", capture_dir=str(tmp_path)),
+            camera_backend=camera_backend,
+        )
+    )
+
+    capture = unwrap_ok(
+        camera_client.post("/api/v1/camera/captures", json={"label": "new_part"})
+    )
+    image = camera_client.get(capture["image_url"])
+
+    assert capture["label"] == "new_part"
+    assert capture["width"] == 320
+    assert capture["height"] == 240
+    assert capture["captured_at"].endswith("Z")
+    assert capture["image_url"].startswith("/api/v1/camera/captures/")
+    assert image.status_code == 200
+    assert image.content == b"\xff\xd8fake-jpeg\xff\xd9"
+    assert camera_backend.open_calls == [(0, 640, 480)]
+    assert camera_backend.session.released is True
+
+
+def test_camera_preview_stream_releases_camera_when_stream_ends(tmp_path):
+    camera_backend = FakeCameraBackend(stop_after_first_frame=True)
+    camera_client = TestClient(
+        create_app(
+            Settings(program_mode="board", capture_dir=str(tmp_path)),
+            camera_backend=camera_backend,
+        )
+    )
+
+    response = camera_client.get("/api/v1/camera/preview.mjpg")
+    status = unwrap_ok(camera_client.get("/api/v1/camera/status"))
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("multipart/x-mixed-replace")
+    assert b"fake-jpeg" in response.content
+    assert camera_backend.session.released is True
+    assert status["preview_active"] is False
+    assert status["preview_clients"] == 0
+
+
+def test_board_mode_camera_capture_is_rejected_while_task_is_running(tmp_path):
+    camera_backend = FakeCameraBackend()
+    board_client = TestClient(
+        create_app(
+            Settings(program_mode="board", capture_dir=str(tmp_path)),
+            program_runner=FakeProgramRunner(),
+            camera_backend=camera_backend,
+        )
+    )
+    created = unwrap_ok(
+        board_client.post(
+            "/api/v1/tasks/pick-sort",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["insulator"]},
+                "destination": {"type": "category_bin", "category": "power_fitting"},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        )
+    )
+
+    error = unwrap_error(
+        board_client.post("/api/v1/camera/captures", json={"label": "blocked"}),
+        409,
+        "ARM_BUSY",
+    )
+
+    assert error["details"]["active_task_id"] == created["task_id"]
+    assert camera_backend.open_calls == []
+
+
+def test_board_mode_task_is_rejected_while_camera_preview_is_active(tmp_path):
+    camera_backend = FakeCameraBackend()
+    app = create_app(
+        Settings(program_mode="board", capture_dir=str(tmp_path)),
+        program_runner=FakeProgramRunner(),
+        camera_backend=camera_backend,
+    )
+    board_client = TestClient(app)
+    stream = app.state.services.camera.preview_stream()
+    next(stream)
+
+    try:
+        error = unwrap_error(
+            board_client.post(
+                "/api/v1/tasks/pick-sort",
+                json={
+                    "target": {"mode": "auto_detect", "labels": ["insulator"]},
+                    "destination": {"type": "category_bin", "category": "power_fitting"},
+                    "options": {"dry_run": False, "max_retry": 1},
+                },
+            ),
+            409,
+            "CAMERA_BUSY",
+        )
+    finally:
+        stream.close()
+
+    assert error["message"] == (
+        "Camera preview is active; close the preview page before starting a board task."
+    )
 
 
 def test_inventory_crud_and_stock_movement():

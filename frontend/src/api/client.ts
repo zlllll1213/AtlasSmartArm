@@ -1,6 +1,8 @@
 import type {
   ApiErrorPayload,
   ApiResponse,
+  CameraCapture,
+  CameraStatus,
   InventoryItem,
   InventoryPage,
   JointAngles,
@@ -75,6 +77,15 @@ export const api = {
     requestJson<VisionDetectResult>('/api/v1/vision/detect', {
       method: 'POST',
       body: JSON.stringify({ source: 'camera', camera_index: 0, save_frame: false }),
+    }),
+  cameraStatus: () => requestJson<CameraStatus>('/api/v1/camera/status'),
+  cameraPreviewUrl: () => makeApiUrl(`/api/v1/camera/preview.mjpg?t=${Date.now()}`),
+  cameraCaptureImageUrl: (captureId: string) =>
+    makeApiUrl(`/api/v1/camera/captures/${captureId}/image`),
+  capturePhoto: (label: string) =>
+    requestJson<CameraCapture>('/api/v1/camera/captures', {
+      method: 'POST',
+      body: JSON.stringify({ label: label.trim() || undefined }),
     }),
   createPickSortTask: (labels: string[], category: MaterialCategory) =>
     requestJson<TaskCreateResult>('/api/v1/tasks/pick-sort', {

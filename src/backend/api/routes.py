@@ -2,10 +2,12 @@ import asyncio
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, StreamingResponse
 
 from src.backend.models.schemas import (
     AuditRequest,
     CalibrationOffsetRequest,
+    CameraCaptureRequest,
     FKRequest,
     IKRequest,
     InventoryItemCreate,
@@ -52,6 +54,32 @@ def vision_detect(request: Request, payload: VisionDetectRequest):
     data = services_from(request).vision.detect(payload)
     services_from(request).event_bus.publish("vision.detection.created", data)
     return ok(request, data)
+
+
+@api_router.get("/camera/status")
+def camera_status(request: Request):
+    return ok(request, services_from(request).camera.status())
+
+
+@api_router.get("/camera/preview.mjpg")
+def camera_preview(request: Request):
+    return StreamingResponse(
+        services_from(request).camera.preview_stream(),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+    )
+
+
+@api_router.post("/camera/captures")
+def camera_capture(request: Request, payload: CameraCaptureRequest):
+    return ok(request, services_from(request).camera.capture(payload.label))
+
+
+@api_router.get("/camera/captures/{capture_id}/image")
+def camera_capture_image(request: Request, capture_id: str):
+    return FileResponse(
+        services_from(request).camera.image_path_for(capture_id),
+        media_type="image/jpeg",
+    )
 
 
 @api_router.get("/calibration/status")

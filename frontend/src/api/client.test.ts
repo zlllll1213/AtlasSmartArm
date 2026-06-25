@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { ApiError, makeApiUrl, unwrapResponse } from './client'
-import type { TaskDetail } from './types'
+import { ApiError, api, makeApiUrl, unwrapResponse } from './client'
+import type { CameraCapture, TaskDetail } from './types'
 
 describe('API client helpers', () => {
   it('builds API URLs from the configured base path', () => {
@@ -60,5 +60,33 @@ describe('API client helpers', () => {
     expect(task.program).toBe('pick_sort_default')
     expect(task.logs).toEqual(['default program started'])
     expect(task.pid).toBe(4242)
+  })
+
+  it('builds camera preview and capture image URLs from the API base', () => {
+    expect(api.cameraPreviewUrl()).toContain('http://localhost:8080/api/v1/camera/preview.mjpg?t=')
+    expect(api.cameraCaptureImageUrl('cap_abc')).toBe(
+      'http://localhost:8080/api/v1/camera/captures/cap_abc/image',
+    )
+  })
+
+  it('unwraps camera capture metadata used by the photo workspace', () => {
+    const capture = unwrapResponse<CameraCapture>({
+      request_id: 'req_camera',
+      success: true,
+      data: {
+        capture_id: 'cap_001',
+        label: 'new_part',
+        file_name: 'new_part_cap_001.jpg',
+        path: '/tmp/new_part_cap_001.jpg',
+        width: 640,
+        height: 480,
+        captured_at: '2026-06-25T00:00:00Z',
+        image_url: '/api/v1/camera/captures/cap_001/image',
+      },
+      error: null,
+    })
+
+    expect(capture.label).toBe('new_part')
+    expect(capture.image_url).toBe('/api/v1/camera/captures/cap_001/image')
   })
 })

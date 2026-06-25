@@ -12,6 +12,7 @@ export type ErrorCode =
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'ARM_BUSY'
+  | 'CAMERA_BUSY'
   | 'CALIBRATION_REQUIRED'
   | 'DEVICE_OFFLINE'
   | 'VISION_UNAVAILABLE'
@@ -52,6 +53,9 @@ export interface SystemStatus {
     index: number
     width: number
     height: number
+    preview_active: boolean
+    preview_clients: number
+    capture_dir: string
   }
   arm: {
     online: boolean
@@ -85,6 +89,23 @@ export interface VisionDetectResult {
   frame_id: string
   image: { width: number; height: number }
   detections: Detection[]
+}
+
+export interface CameraStatus {
+  preview_active: boolean
+  preview_clients: number
+  capture_dir: string
+}
+
+export interface CameraCapture {
+  capture_id: string
+  label: string
+  file_name: string
+  path: string
+  width: number
+  height: number
+  captured_at: string
+  image_url: string
 }
 
 export interface TaskCreateResult {

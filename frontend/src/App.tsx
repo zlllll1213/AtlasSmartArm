@@ -1,9 +1,11 @@
 import {
   Activity,
   Boxes,
+  Camera,
   CameraOff,
   ClipboardList,
   Cpu,
+  ImageDown,
   Play,
   RefreshCw,
   Router,
@@ -11,19 +13,20 @@ import {
   SquareX,
   Terminal,
 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { api } from './api/client'
-import type { SystemEvent, SystemStatus, TaskDetail, TaskState } from './api/types'
+import type { CameraCapture, SystemEvent, SystemStatus, TaskDetail, TaskState } from './api/types'
 import { useEventStream } from './hooks/useEventStream'
 import { usePolling } from './hooks/usePolling'
 import './styles.css'
 
-type View = 'pick-sort' | 'stack' | 'management' | 'status'
+type View = 'pick-sort' | 'stack' | 'camera' | 'management' | 'status'
 
 const viewLabels: Record<View, string> = {
   'pick-sort': '分拣',
   stack: '堆叠',
+  camera: '拍照',
   management: '管理',
   status: '状态',
 }
@@ -59,6 +62,8 @@ export default function App() {
   const [status, setStatus] = useState<SystemStatus | null>(null)
   const [task, setTask] = useState<TaskDetail | null>(null)
   const [history, setHistory] = useState<TaskDetail[]>([])
+  const [captures, setCaptures] = useState<CameraCapture[]>([])
+  const [captureLabel, setCaptureLabel] = useState('new_object')
   const [events, setEvents] = useState<SystemEvent[]>([])
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('ready')
@@ -120,6 +125,12 @@ export default function App() {
         })
       : undefined
 
+  const capturePhoto = () =>
+    runAction('photo captured', async () => {
+      const capture = await api.capturePhoto(captureLabel)
+      setCaptures((current) => [capture, ...current].slice(0, 12))
+    })
+
   return (
     <main className="app-shell">
       <aside className="side-rail" aria-label="工作台导航">
@@ -138,6 +149,10 @@ export default function App() {
           <button className={view === 'stack' ? 'active' : ''} type="button" onClick={() => setView('stack')}>
             <Boxes aria-hidden="true" size={17} />
             堆叠
+          </button>
+          <button className={view === 'camera' ? 'active' : ''} type="button" onClick={() => setView('camera')}>
+            <Camera aria-hidden="true" size={17} />
+            拍照
           </button>
           <button className={view === 'management' ? 'active' : ''} type="button" onClick={() => setView('management')}>
             <ClipboardList aria-hidden="true" size={17} />
@@ -167,7 +182,12 @@ export default function App() {
         <section className="signal-strip" aria-label="实时状态">
           <Signal icon={<Router size={18} />} label="Board" value={status?.atlas.host ?? '192.168.137.100'} tone="idle" />
           <Signal icon={<Activity size={18} />} label="Mode" value={status?.program_mode ?? 'mock'} tone="busy" />
-          <Signal icon={<CameraOff size={18} />} label="Camera" value={status?.camera_policy ?? 'unavailable'} tone="idle" />
+          <Signal
+            icon={status?.camera.preview_active ? <Camera size={18} /> : <CameraOff size={18} />}
+            label="Camera"
+            value={status?.camera.preview_active ? 'previewing' : (status?.camera_policy ?? 'unavailable')}
+            tone={status?.camera.preview_active ? 'busy' : 'idle'}
+          />
           <Signal icon={<ShieldAlert size={18} />} label="Arm" value={status?.arm.state ?? 'unknown'} tone={status?.arm.state === 'idle' ? 'good' : 'busy'} />
         </section>
 
@@ -189,6 +209,16 @@ export default function App() {
             busy={busy}
             onStart={startStack}
             onCancel={cancelTask}
+          />
+        ) : null}
+        {view === 'camera' ? (
+          <CapturePanel
+            status={status}
+            captures={captures}
+            label={captureLabel}
+            busy={busy}
+            onLabelChange={setCaptureLabel}
+            onCapture={capturePhoto}
           />
         ) : null}
         {view === 'management' ? <ManagementPanel history={history} events={events} /> : null}
@@ -258,6 +288,92 @@ function OperationPanel({ title, program, task, busy, onStart, onCancel }: Opera
         </div>
       </div>
       <TaskInspector task={visibleTask} />
+    </section>
+  )
+}
+
+interface CapturePanelProps {
+  status: SystemStatus | null
+  captures: CameraCapture[]
+  label: string
+  busy: boolean
+  onLabelChange: (value: string) => void
+  onCapture: () => void
+}
+
+function CapturePanel({ status, captures, label, busy, onLabelChange, onCapture }: CapturePanelProps) {
+  const [previewUrl, setPreviewUrl] = useState('')
+  const blockedByTask = Boolean(status?.active_task_id)
+
+  useEffect(() => {
+    if (blockedByTask) {
+      setPreviewUrl('')
+      return undefined
+    }
+    setPreviewUrl(api.cameraPreviewUrl())
+    return () => setPreviewUrl('')
+  }, [blockedByTask])
+
+  return (
+    <section className="capture-grid">
+      <div className="capture-surface">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">Camera session</span>
+            <h2>实时预览</h2>
+          </div>
+          <span className={`state-pill ${status?.camera.preview_active ? 'busy' : 'idle'}`}>
+            {status?.camera.preview_active ? '预览中' : '待连接'}
+          </span>
+        </div>
+        {blockedByTask ? (
+          <div className="camera-lock live">
+            <CameraOff aria-hidden="true" size={30} />
+            <strong>Camera unavailable</strong>
+            <span>真实任务正在运行，默认程序占用摄像头</span>
+          </div>
+        ) : (
+          <div className="preview-frame">
+            {previewUrl ? <img src={previewUrl} alt="机械臂摄像头实时预览" /> : null}
+          </div>
+        )}
+        <div className="capture-controls">
+          <label>
+            <span>Label</span>
+            <input
+              value={label}
+              onChange={(event) => onLabelChange(event.target.value)}
+              maxLength={80}
+              placeholder="new_object"
+            />
+          </label>
+          <button type="button" onClick={onCapture} disabled={busy || blockedByTask}>
+            <ImageDown aria-hidden="true" size={17} />
+            拍照
+          </button>
+        </div>
+      </div>
+      <div className="capture-gallery">
+        <div className="section-heading compact">
+          <div>
+            <span className="eyebrow">Captured samples</span>
+            <h2>最近照片</h2>
+          </div>
+          <Camera aria-hidden="true" size={20} />
+        </div>
+        <div className="capture-list">
+          {captures.map((capture) => (
+            <figure key={capture.capture_id} className="capture-item">
+              <img src={api.cameraCaptureImageUrl(capture.capture_id)} alt={capture.label} />
+              <figcaption>
+                <strong>{capture.label}</strong>
+                <span>{capture.width}x{capture.height} · {formatTime(capture.captured_at)}</span>
+              </figcaption>
+            </figure>
+          ))}
+          {captures.length === 0 ? <div className="empty-line">no captured photos</div> : null}
+        </div>
+      </div>
     </section>
   )
 }

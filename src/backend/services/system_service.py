@@ -1,6 +1,7 @@
 from src.backend.config import Settings
 from src.backend.services.arm_service import ArmService
 from src.backend.services.calibration_service import CalibrationService
+from src.backend.services.camera_service import CameraService
 from src.backend.services.task_service import TaskService
 
 
@@ -11,11 +12,13 @@ class SystemService:
         arm_service: ArmService,
         calibration_service: CalibrationService,
         task_service: TaskService,
+        camera_service: CameraService,
     ) -> None:
         self.settings = settings
         self.arm_service = arm_service
         self.calibration_service = calibration_service
         self.task_service = task_service
+        self.camera_service = camera_service
 
     def status(self) -> dict[str, object]:
         return {
@@ -37,6 +40,7 @@ class SystemService:
                 "index": self.settings.camera_index,
                 "width": self.settings.camera_width,
                 "height": self.settings.camera_height,
+                **self.camera_service.status(),
             },
             "arm": {
                 "online": self.settings.arm_mock,

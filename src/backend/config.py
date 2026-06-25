@@ -33,6 +33,7 @@ class Settings:
     calibration_dir: str = os.getenv(
         "CALIBRATION_DIR", "/opt/atlas-smart-arm/calibration"
     )
+    capture_dir: str = os.getenv("CAPTURE_DIR", "data/captures")
     program_mode: Literal["mock", "board"] = _program_mode(os.getenv("PROGRAM_MODE"))
     robot_arm_root: str = os.getenv(
         "ROBOT_ARM_ROOT",

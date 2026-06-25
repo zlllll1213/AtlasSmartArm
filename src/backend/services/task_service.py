@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from itertools import count
+from typing import Callable
 
 from src.backend.errors import ApiError
 from src.backend.models.enums import TaskState, TaskType
@@ -67,10 +68,12 @@ class TaskService:
         event_bus: EventBus,
         settings: Settings,
         program_runner: ProgramRunner | None = None,
+        camera_in_use: Callable[[], bool] | None = None,
     ) -> None:
         self.event_bus = event_bus
         self.settings = settings
         self.program_runner = program_runner
+        self.camera_in_use = camera_in_use or (lambda: False)
         self._counter = count(1)
         self._tasks: dict[str, TaskRecord] = {}
 
@@ -150,6 +153,13 @@ class TaskService:
                     "A board default program task is already running.",
                     409,
                     {"active_task_id": active_task_id},
+                )
+            if self.camera_in_use():
+                raise ApiError(
+                    "CAMERA_BUSY",
+                    "Camera preview is active; close the preview page before starting a board task.",
+                    409,
+                    {},
                 )
         task_id = f"task_{next(self._counter):012d}"
         task = TaskRecord(task_id=task_id, type=task_type, request=request)
