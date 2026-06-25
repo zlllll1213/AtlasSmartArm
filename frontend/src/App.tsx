@@ -31,14 +31,22 @@ import { useEventStream } from './hooks/useEventStream'
 import { usePolling } from './hooks/usePolling'
 import './styles.css'
 
-type View = 'pick-sort' | 'stack' | 'camera' | 'management' | 'status'
+export type View = 'pick-sort' | 'stack' | 'camera' | 'management' | 'status'
 
 const viewLabels: Record<View, string> = {
   'pick-sort': '分拣',
   stack: '堆叠',
-  camera: '拍照',
+  camera: '相机',
   management: '管理',
   status: '状态',
+}
+
+const viewSubtitles: Record<View, string> = {
+  'pick-sort': '默认分拣程序',
+  stack: '默认堆叠程序',
+  camera: '相机预览与样本采集',
+  management: '任务记录与事件流',
+  status: '开发板与服务状态',
 }
 
 const stateLabels: Record<TaskState, string> = {
@@ -61,11 +69,31 @@ const recognitionCategoryLabels: Record<RecognitionCategory, string> = {
   unknown: '未知类别',
 }
 
+const terminalTaskStates = new Set<TaskState>(['succeeded', 'failed', 'cancelled'])
+
+export function isTaskInProgress(task: Pick<TaskDetail, 'state'> | null | undefined): boolean {
+  return task ? !terminalTaskStates.has(task.state) : false
+}
+
+export function canStartProgramAction(view: View, activeTask: boolean, busy: boolean): boolean {
+  return (view === 'pick-sort' || view === 'stack') && !activeTask && !busy
+}
+
 function formatTime(value: string | null | undefined): string {
   if (!value) {
-    return 'pending'
+    return '--'
   }
   return new Date(value).toLocaleTimeString('zh-CN', { hour12: false })
+}
+
+function formatDateTime(value = new Date()): string {
+  return value.toLocaleString('zh-CN', {
+    hour12: false,
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 function stateTone(state: TaskState | undefined): string {
@@ -85,6 +113,7 @@ export default function App() {
   const [events, setEvents] = useState<SystemEvent[]>([])
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('ready')
+  const [statusError, setStatusError] = useState<string | null>(null)
 
   const rememberTask = useCallback((next: TaskDetail) => {
     setTask(next)
@@ -101,14 +130,21 @@ export default function App() {
     })
   }, [])
 
-  useEventStream(rememberEvent)
+  useEventStream(rememberEvent, Boolean(status))
 
   const refresh = useCallback(async () => {
-    const nextStatus = await api.systemStatus()
-    setStatus(nextStatus)
-    const taskId = nextStatus.active_task_id ?? task?.task_id
-    if (taskId) {
-      rememberTask(await api.taskDetail(taskId))
+    try {
+      const nextStatus = await api.systemStatus()
+      setStatus(nextStatus)
+      setStatusError(null)
+      const taskId = nextStatus.active_task_id ?? task?.task_id
+      if (taskId) {
+        rememberTask(await api.taskDetail(taskId))
+      }
+    } catch (error) {
+      void error
+      setStatusError('后端未连接')
+      setMessage('offline preview')
     }
   }, [rememberTask, task?.task_id])
 
@@ -152,100 +188,156 @@ export default function App() {
       setCaptures((current) => [capture, ...current].slice(0, 12))
     })
 
+  const activeTask = isTaskInProgress(task) || Boolean(status?.active_task_id)
+  const canStartFromRibbon = canStartProgramAction(view, activeTask, busy)
+  const startSelectedProgram = view === 'stack' ? startStack : startPickSort
+
   return (
     <main className="app-shell">
-      <aside className="side-rail" aria-label="工作台导航">
-        <div className="brand-mark">
-          <Cpu aria-hidden="true" size={24} />
+      <header className="command-ribbon">
+        <div className="brand-mark" aria-label="AtlasSmartArm">
+          <Cpu aria-hidden="true" size={26} />
           <div>
             <strong>AtlasSmartArm</strong>
-            <span>{status?.program_mode ?? 'mock'} mode</span>
+            <span>Board demo workbench</span>
           </div>
         </div>
-        <nav className="mode-nav">
-          <button className={view === 'pick-sort' ? 'active' : ''} type="button" onClick={() => setView('pick-sort')}>
-            <Play aria-hidden="true" size={17} />
-            分拣
+
+        <div className="ribbon-actions" aria-label="快速操作">
+          <button className="ribbon-command primary" type="button" onClick={startSelectedProgram} disabled={!canStartFromRibbon}>
+            <Play aria-hidden="true" size={18} />
+            启动程序
           </button>
-          <button className={view === 'stack' ? 'active' : ''} type="button" onClick={() => setView('stack')}>
-            <Boxes aria-hidden="true" size={17} />
-            堆叠
+          <button className="ribbon-command danger" type="button" onClick={cancelTask} disabled={busy || !activeTask}>
+            <SquareX aria-hidden="true" size={18} />
+            中断任务
           </button>
-          <button className={view === 'camera' ? 'active' : ''} type="button" onClick={() => setView('camera')}>
-            <Camera aria-hidden="true" size={17} />
+          <button className="ribbon-command ghost" type="button" onClick={() => void refresh()} disabled={busy}>
+            <RefreshCw aria-hidden="true" size={18} className={busy ? 'spin' : undefined} />
+            刷新状态
+          </button>
+          <button className="ribbon-command ghost" type="button" onClick={() => setView('camera')}>
+            <Camera aria-hidden="true" size={18} />
             拍照
           </button>
-          <button className={view === 'management' ? 'active' : ''} type="button" onClick={() => setView('management')}>
-            <ClipboardList aria-hidden="true" size={17} />
+          <button className="ribbon-command ghost" type="button" onClick={() => setView('management')}>
+            <ClipboardList aria-hidden="true" size={18} />
             管理
           </button>
-          <button className={view === 'status' ? 'active' : ''} type="button" onClick={() => setView('status')}>
-            <Activity aria-hidden="true" size={17} />
-            状态
-          </button>
-        </nav>
-      </aside>
+        </div>
 
-      <section className="workbench">
-        <header className="workbench-top">
-          <div>
-            <span className="eyebrow">Board demo workbench</span>
-            <h1>{viewLabels[view]}</h1>
-          </div>
-          <div className="topbar-actions">
-            <span>{message}</span>
-            <button className="icon-button" type="button" title="刷新" onClick={() => void refresh()} disabled={busy}>
-              <RefreshCw aria-hidden="true" size={18} className={busy ? 'spin' : undefined} />
+        <div className="ribbon-status" aria-live="polite">
+          <span className={`connection-dot ${statusError ? 'warning' : 'ready'}`} />
+          <strong>{statusError ? 'offline preview' : message}</strong>
+          <span>{formatDateTime()}</span>
+        </div>
+      </header>
+
+      <div className="app-frame">
+        <aside className="side-rail" aria-label="工作台导航">
+          <span className="rail-label">模式</span>
+          <nav className="mode-nav">
+            <button className={view === 'pick-sort' ? 'active' : ''} type="button" onClick={() => setView('pick-sort')}>
+              <Play aria-hidden="true" size={19} />
+              <span>分拣</span>
             </button>
-          </div>
-        </header>
+            <button className={view === 'stack' ? 'active' : ''} type="button" onClick={() => setView('stack')}>
+              <Boxes aria-hidden="true" size={19} />
+              <span>堆叠</span>
+            </button>
+            <button className={view === 'camera' ? 'active' : ''} type="button" onClick={() => setView('camera')}>
+              <Camera aria-hidden="true" size={19} />
+              <span>相机</span>
+            </button>
+            <button className={view === 'management' ? 'active' : ''} type="button" onClick={() => setView('management')}>
+              <ClipboardList aria-hidden="true" size={19} />
+              <span>管理</span>
+            </button>
+            <button className={view === 'status' ? 'active' : ''} type="button" onClick={() => setView('status')}>
+              <Activity aria-hidden="true" size={19} />
+              <span>状态</span>
+            </button>
+          </nav>
+        </aside>
 
-        <section className="signal-strip" aria-label="实时状态">
-          <Signal icon={<Router size={18} />} label="Board" value={status?.atlas.host ?? '192.168.137.100'} tone="idle" />
-          <Signal icon={<Activity size={18} />} label="Mode" value={status?.program_mode ?? 'mock'} tone="busy" />
-          <Signal
-            icon={status?.camera.preview_active ? <Camera size={18} /> : <CameraOff size={18} />}
-            label="Camera"
-            value={status?.camera.preview_active ? 'previewing' : (status?.camera_policy ?? 'unavailable')}
-            tone={status?.camera.preview_active ? 'busy' : 'idle'}
-          />
-          <Signal icon={<ShieldAlert size={18} />} label="Arm" value={status?.arm.state ?? 'unknown'} tone={status?.arm.state === 'idle' ? 'good' : 'busy'} />
+        <section className="workbench">
+          <header className="workbench-top">
+            <div>
+              <span className="eyebrow">current workspace</span>
+              <h1>{viewLabels[view]}</h1>
+              <p>{viewSubtitles[view]}</p>
+            </div>
+            <div className="topbar-actions">
+              <span>{statusError ?? '系统状态已同步'}</span>
+              <button className="icon-button" type="button" title="刷新" onClick={() => void refresh()} disabled={busy}>
+                <RefreshCw aria-hidden="true" size={18} className={busy ? 'spin' : undefined} />
+              </button>
+            </div>
+          </header>
+
+          {statusError ? (
+            <div className="notice-strip" role="status">
+              <ShieldAlert aria-hidden="true" size={18} />
+              <span>后端未连接，当前为纯前端预览。控制按钮和布局可操作，真实设备状态会在后端可用后同步。</span>
+            </div>
+          ) : null}
+
+          <section className="signal-strip" aria-label="实时状态">
+            <Signal icon={<Router size={18} />} label="Board" value={status?.atlas.host ?? '192.168.137.100'} detail={status?.atlas.online ? '在线' : '等待连接'} tone={status?.atlas.online ? 'good' : 'idle'} />
+            <Signal icon={<Activity size={18} />} label="Mode" value={status?.program_mode ?? 'mock'} detail="运行模式" tone="busy" />
+            <Signal
+              icon={status?.camera.preview_active ? <Camera size={18} /> : <CameraOff size={18} />}
+              label="Camera"
+              value={status?.camera.preview_active ? 'previewing' : (status?.camera_policy ?? 'unavailable')}
+              detail={status?.camera.preview_clients ? `${status.camera.preview_clients} clients` : '相机不可用'}
+              tone={status?.camera.preview_active ? 'busy' : 'idle'}
+            />
+            <Signal icon={<ShieldAlert size={18} />} label="Arm" value={status?.arm.state ?? 'unknown'} detail={status?.arm.control_lock ?? '机械臂状态'} tone={status?.arm.state === 'idle' ? 'good' : 'busy'} />
+          </section>
+
+          {view === 'pick-sort' ? (
+            <OperationPanel
+              title="默认分拣程序"
+              program="pick_sort_default"
+              task={task}
+              busy={busy}
+              showRecognition
+              onStart={startPickSort}
+              onCancel={cancelTask}
+            />
+          ) : null}
+          {view === 'stack' ? (
+            <OperationPanel
+              title="默认堆叠程序"
+              program="stack_default"
+              task={task}
+              busy={busy}
+              onStart={startStack}
+              onCancel={cancelTask}
+            />
+          ) : null}
+          {view === 'camera' ? (
+            <CapturePanel
+              status={status}
+              captures={captures}
+              label={captureLabel}
+              busy={busy}
+              onLabelChange={setCaptureLabel}
+              onCapture={capturePhoto}
+            />
+          ) : null}
+          {view === 'management' ? <ManagementPanel history={history} events={events} /> : null}
+          {view === 'status' ? <StatusPanel status={status} events={events} /> : null}
         </section>
+      </div>
 
-        {view === 'pick-sort' ? (
-          <OperationPanel
-            title="默认分拣程序"
-            program="pick_sort_default"
-            task={task}
-            busy={busy}
-            showRecognition
-            onStart={startPickSort}
-            onCancel={cancelTask}
-          />
-        ) : null}
-        {view === 'stack' ? (
-          <OperationPanel
-            title="默认堆叠程序"
-            program="stack_default"
-            task={task}
-            busy={busy}
-            onStart={startStack}
-            onCancel={cancelTask}
-          />
-        ) : null}
-        {view === 'camera' ? (
-          <CapturePanel
-            status={status}
-            captures={captures}
-            label={captureLabel}
-            busy={busy}
-            onLabelChange={setCaptureLabel}
-            onCapture={capturePhoto}
-          />
-        ) : null}
-        {view === 'management' ? <ManagementPanel history={history} events={events} /> : null}
-        {view === 'status' ? <StatusPanel status={status} events={events} /> : null}
-      </section>
+      <footer className="system-footer" aria-label="运行环境">
+        <span><span className="connection-dot ready" /> ROS2 Humble</span>
+        <span>网络 {status?.atlas.network.ip_address ?? '--'}</span>
+        <span>模型 {status?.vision.model_name ?? '--'}</span>
+        <span>校准 {status?.calibration.ready ? status.calibration.version : '--'}</span>
+        <span>电源 {status?.arm.online ? 'ready' : '--'}</span>
+      </footer>
     </main>
   )
 }
@@ -254,15 +346,17 @@ interface SignalProps {
   icon: React.ReactNode
   label: string
   value: string
+  detail: string
   tone: 'good' | 'bad' | 'busy' | 'idle'
 }
 
-function Signal({ icon, label, value, tone }: SignalProps) {
+function Signal({ icon, label, value, detail, tone }: SignalProps) {
   return (
     <div className={`signal ${tone}`}>
       {icon}
       <span>{label}</span>
       <strong>{value}</strong>
+      <em>{detail}</em>
     </div>
   )
 }
@@ -280,7 +374,8 @@ interface OperationPanelProps {
 function OperationPanel({ title, program, task, busy, showRecognition = false, onStart, onCancel }: OperationPanelProps) {
   const isCurrentProgram = task?.program === program || task?.program === null
   const visibleTask = isCurrentProgram ? task : null
-  const active = visibleTask ? !['succeeded', 'failed', 'cancelled'].includes(visibleTask.state) : false
+  const active = isTaskInProgress(visibleTask)
+  const nodeName = program === 'pick_sort_default' ? '/pick_sort_node' : '/stack_node'
 
   return (
     <section className={`operation-grid ${showRecognition ? 'with-recognition' : ''}`}>
@@ -299,8 +394,13 @@ function OperationPanel({ title, program, task, busy, showRecognition = false, o
           <strong>Camera reserved</strong>
           <span>任务运行时由开发板默认 ROS2 程序独占</span>
         </div>
+        <div className="program-fields" aria-label="程序配置">
+          <Metric label="程序包" value={program} />
+          <Metric label="默认节点" value={nodeName} />
+          <Metric label="参数" value="--mode default" />
+        </div>
         <div className="button-row">
-          <button type="button" onClick={onStart} disabled={busy || active}>
+          <button className="start-command" type="button" onClick={onStart} disabled={busy || active}>
             <Play aria-hidden="true" size={17} />
             启动
           </button>
@@ -386,6 +486,7 @@ function CapturePanel({ status, captures, label, busy, onLabelChange, onCapture 
   const [previewUrl, setPreviewUrl] = useState('')
   const previewImageRef = useRef<HTMLImageElement | null>(null)
   const blockedByTask = Boolean(status?.active_task_id)
+  const cameraOnline = Boolean(status?.camera.online)
 
   useEffect(() => {
     const stopPreview = () => {
@@ -395,14 +496,14 @@ function CapturePanel({ status, captures, label, busy, onLabelChange, onCapture 
       }
       void api.stopCameraPreview().catch(() => undefined)
     }
-    if (blockedByTask) {
+    if (blockedByTask || !cameraOnline) {
       stopPreview()
       setPreviewUrl('')
       return undefined
     }
     setPreviewUrl(api.cameraPreviewUrl())
     return stopPreview
-  }, [blockedByTask])
+  }, [blockedByTask, cameraOnline])
 
   return (
     <section className="capture-grid">
@@ -416,11 +517,11 @@ function CapturePanel({ status, captures, label, busy, onLabelChange, onCapture 
             {status?.camera.preview_active ? '预览中' : '待连接'}
           </span>
         </div>
-        {blockedByTask ? (
+        {blockedByTask || !cameraOnline ? (
           <div className="camera-lock live">
             <CameraOff aria-hidden="true" size={30} />
-            <strong>Camera unavailable</strong>
-            <span>真实任务正在运行，默认程序占用摄像头</span>
+            <strong>{blockedByTask ? 'Camera unavailable' : 'Camera offline'}</strong>
+            <span>{blockedByTask ? '真实任务正在运行，默认程序占用摄像头' : '相机服务在线后会显示实时预览'}</span>
           </div>
         ) : (
           <div className="preview-frame">
@@ -470,24 +571,53 @@ function CapturePanel({ status, captures, label, busy, onLabelChange, onCapture 
 
 function TaskInspector({ task }: { task: TaskDetail | null }) {
   return (
-    <div className="inspector">
+    <div className="inspector task-detail-panel">
       <div className="section-heading compact">
         <div>
           <span className="eyebrow">Task detail</span>
-          <h2>{task?.task_id ?? 'no task'}</h2>
+          <h2>任务详情</h2>
         </div>
         <Terminal aria-hidden="true" size={20} />
+      </div>
+      <div className="current-task-line">
+        <span>当前任务</span>
+        <strong>{task?.task_id ?? 'no task'}</strong>
       </div>
       <div className="metric-grid">
         <Metric label="Program" value={task?.program ?? 'none'} />
         <Metric label="PID" value={task?.pid ? String(task.pid) : 'none'} />
-        <Metric label="Exit" value={task?.exit_code === null || task?.exit_code === undefined ? 'pending' : String(task.exit_code)} />
+        <Metric label="State" value={task ? stateLabels[task.state] : 'pending'} />
         <Metric label="Started" value={formatTime(task?.started_at)} />
+        <Metric label="Exit" value={task?.exit_code === null || task?.exit_code === undefined ? 'pending' : String(task.exit_code)} />
+        <Metric label="Step" value={task?.current_step ?? '--'} />
       </div>
       <div className="progress-track">
         <div className="progress-bar" style={{ width: `${Math.round((task?.progress ?? 0) * 100)}%` }} />
       </div>
+      <TaskStepRail state={task?.state} />
       <LogPanel logs={task?.logs ?? []} />
+    </div>
+  )
+}
+
+function TaskStepRail({ state }: { state: TaskState | undefined }) {
+  const steps = [
+    { key: 'queued', label: '待启动' },
+    { key: 'detecting', label: '识别中' },
+    { key: 'planning', label: '规划中' },
+    { key: 'moving', label: '执行中' },
+    { key: 'succeeded', label: '完成' },
+  ] as const
+  const activeIndex = state ? Math.max(0, steps.findIndex((step) => step.key === state)) : 0
+
+  return (
+    <div className="task-step-rail" aria-label="任务阶段">
+      {steps.map((step, index) => (
+        <span className={index <= activeIndex ? 'active' : ''} key={step.key}>
+          <i />
+          {step.label}
+        </span>
+      ))}
     </div>
   )
 }

@@ -6,46 +6,52 @@
 
 ## Overview
 
-<!--
-Document your project's hook conventions here.
-
-Questions to answer:
-- What custom hooks do you have?
-- How do you handle data fetching?
-- What are the naming conventions?
-- How do you share stateful logic?
--->
-
-(To be filled by the team)
+Frontend hooks wrap recurring runtime behavior such as polling and event streams.
+Components decide when a hook is enabled; hooks own setup and cleanup.
 
 ---
 
 ## Custom Hook Patterns
 
-<!-- How to create and structure custom hooks -->
+- Hooks that open external connections must accept an `enabled` gate when the
+  connection depends on backend availability.
+- When disabled, the hook must return without opening network connections.
+- Cleanup must close timers, sockets, or previews created by the hook.
 
-(To be filled by the team)
+```typescript
+export function useEventStream(onEvent: (event: SystemEvent) => void, enabled = true): void {
+  useEffect(() => {
+    if (!enabled) {
+      return undefined
+    }
+    const disconnect = connectEventStream(onEvent)
+    return disconnect
+  }, [enabled, onEvent])
+}
+```
 
 ---
 
 ## Data Fetching
 
-<!-- How data fetching is handled (React Query, SWR, etc.) -->
-
-(To be filled by the team)
+- REST polling is driven by `usePolling(load, delayMs)`.
+- WebSocket event streams should start only after a successful backend status
+  read proves the backend is reachable.
+- Pure frontend preview must not spam unavailable WebSocket or camera preview
+  endpoints.
 
 ---
 
 ## Naming Conventions
 
-<!-- Hook naming rules (use*, etc.) -->
-
-(To be filled by the team)
+Use the `use*` prefix for hooks and keep public hook arguments primitive or
+stable callback references where possible.
 
 ---
 
 ## Common Mistakes
 
-<!-- Hook-related mistakes your team has made -->
-
-(To be filled by the team)
+- Do not open WebSocket connections unconditionally on first render when the app
+  also supports backend-offline preview.
+- Do not leave interval or socket cleanup to component unmount side effects
+  outside the hook.

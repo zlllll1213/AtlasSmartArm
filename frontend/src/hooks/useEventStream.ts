@@ -3,8 +3,11 @@ import { useEffect } from 'react'
 import { connectEventStream } from '../api/client'
 import type { SystemEvent } from '../api/types'
 
-export function useEventStream(onEvent: (event: SystemEvent) => void): void {
+export function useEventStream(onEvent: (event: SystemEvent) => void, enabled = true): void {
   useEffect(() => {
+    if (!enabled) {
+      return undefined
+    }
     let disconnect = connectEventStream(onEvent)
     const reconnect = window.setInterval(() => {
       disconnect()
@@ -14,5 +17,5 @@ export function useEventStream(onEvent: (event: SystemEvent) => void): void {
       window.clearInterval(reconnect)
       disconnect()
     }
-  }, [onEvent])
+  }, [enabled, onEvent])
 }
