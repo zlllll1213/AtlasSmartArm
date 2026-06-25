@@ -114,6 +114,23 @@ export interface TaskCreateResult {
   state: TaskState
 }
 
+export type RecognitionCategory = 'hazardous' | 'recyclable' | 'kitchen' | 'other' | 'unknown'
+
+export interface RecognitionDetection {
+  label: string
+  category: RecognitionCategory
+  x_m: number
+  y_m: number
+  source: 'msg' | 'new_msg'
+}
+
+export interface TaskRecognition {
+  latest_label: string
+  latest_category: RecognitionCategory
+  detections: RecognitionDetection[]
+  updated_at: string
+}
+
 export type TaskState =
   | 'queued'
   | 'detecting'
@@ -135,6 +152,7 @@ export interface TaskDetail extends TaskCreateResult {
   pid: number | null
   exit_code: number | null
   logs: string[]
+  recognition: TaskRecognition | null
   started_at: string | null
   ended_at: string | null
 }

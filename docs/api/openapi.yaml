@@ -614,6 +614,40 @@ components:
         - string
         - "null"
       enum: [pick_sort_default, stack_default, null]
+    RecognitionCategory:
+      type: string
+      enum: [hazardous, recyclable, kitchen, other, unknown]
+    RecognitionDetection:
+      type: object
+      required: [label, category, x_m, y_m, source]
+      properties:
+        label:
+          type: string
+        category:
+          $ref: "#/components/schemas/RecognitionCategory"
+        x_m:
+          type: number
+        y_m:
+          type: number
+        source:
+          type: string
+          enum: [msg, new_msg]
+    TaskRecognition:
+      type:
+        - object
+        - "null"
+      required: [latest_label, latest_category, detections, updated_at]
+      properties:
+        latest_label:
+          type: string
+        latest_category:
+          $ref: "#/components/schemas/RecognitionCategory"
+        detections:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecognitionDetection"
+        updated_at:
+          type: string
     TaskDetail:
       type: object
       required:
@@ -629,6 +663,7 @@ components:
         - pid
         - exit_code
         - logs
+        - recognition
         - started_at
         - ended_at
       properties:
@@ -667,6 +702,8 @@ components:
           type: array
           items:
             type: string
+        recognition:
+          $ref: "#/components/schemas/TaskRecognition"
         started_at:
           type:
             - string

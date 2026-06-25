@@ -51,6 +51,20 @@ describe('API client helpers', () => {
         pid: 4242,
         exit_code: null,
         logs: ['default program started'],
+        recognition: {
+          latest_label: 'Book',
+          latest_category: 'recyclable',
+          detections: [
+            {
+              label: 'Book',
+              category: 'recyclable',
+              x_m: 0.012,
+              y_m: 0.321,
+              source: 'msg',
+            },
+          ],
+          updated_at: '2026-06-25T00:00:01Z',
+        },
         started_at: '2026-06-25T00:00:00Z',
         ended_at: null,
       },
@@ -59,6 +73,7 @@ describe('API client helpers', () => {
 
     expect(task.program).toBe('pick_sort_default')
     expect(task.logs).toEqual(['default program started'])
+    expect(task.recognition?.latest_label).toBe('Book')
     expect(task.pid).toBe(4242)
   })
 

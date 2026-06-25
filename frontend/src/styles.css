@@ -153,6 +153,7 @@ button:disabled {
 .signal,
 .command-surface,
 .inspector,
+.recognition-panel,
 .history-panel,
 .events-panel {
   background: #fbfcf8;
@@ -210,6 +211,10 @@ button:disabled {
   grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
 }
 
+.operation-grid.with-recognition {
+  grid-template-columns: minmax(280px, 0.78fr) minmax(280px, 0.78fr) minmax(380px, 1fr);
+}
+
 .command-surface,
 .capture-surface {
   min-height: 380px;
@@ -217,6 +222,7 @@ button:disabled {
 }
 
 .inspector,
+.recognition-panel,
 .history-panel,
 .events-panel,
 .capture-gallery {
@@ -226,6 +232,150 @@ button:disabled {
   min-height: 0;
   overflow: hidden;
   padding: 18px;
+}
+
+.recognition-content {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+}
+
+.recognition-hero {
+  background: #f6f8f2;
+  border: 1px solid #e1e8dd;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.recognition-hero span,
+.detected-tag span {
+  color: #687166;
+  font-size: 0.76rem;
+}
+
+.recognition-hero strong {
+  font-size: 1.45rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.recognition-meta {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tag-window {
+  background: #f6f8f2;
+  border: 1px solid #e1e8dd;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  max-height: 148px;
+  min-height: 112px;
+  overflow-y: scroll;
+  padding: 10px 6px 10px 10px;
+  scrollbar-gutter: stable;
+}
+
+.detected-tag {
+  align-items: center;
+  border-bottom: 1px solid #e2e8de;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 42px;
+  padding-bottom: 8px;
+}
+
+.detected-tag strong,
+.detected-tag span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.detected-tag code {
+  color: #596257;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.76rem;
+}
+
+.recognition-empty {
+  align-content: center;
+  background: #f6f8f2;
+  border: 1px dashed #b9c4b4;
+  border-radius: 8px;
+  display: grid;
+  gap: 7px;
+  justify-items: center;
+  min-height: 220px;
+  padding: 18px;
+  text-align: center;
+}
+
+.recognition-empty svg {
+  color: #6c4a00;
+}
+
+.recognition-empty strong,
+.recognition-empty span {
+  display: block;
+}
+
+.recognition-empty span {
+  color: #596257;
+  font-size: 0.86rem;
+}
+
+.category-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.category-chip {
+  align-self: start;
+  border: 1px solid #cbd4c5;
+  border-radius: 999px;
+  color: #20251f;
+  display: inline-flex;
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 800;
+  padding: 5px 9px;
+}
+
+.category-chip.hazardous {
+  background: #ffe1df;
+  border-color: #f3aaa4;
+  color: #912018;
+}
+
+.category-chip.recyclable {
+  background: #dff0ff;
+  border-color: #9bcaf1;
+  color: #155381;
+}
+
+.category-chip.kitchen {
+  background: #e6f4d7;
+  border-color: #b2d88b;
+  color: #315f12;
+}
+
+.category-chip.other {
+  background: #fff0ca;
+  border-color: #e8c46f;
+  color: #73520d;
+}
+
+.category-chip.unknown {
+  background: #eceff3;
+  border-color: #c7ced8;
+  color: #4d5761;
 }
 
 .section-heading {
@@ -464,7 +614,8 @@ button:disabled {
 .ledger-table,
 .event-list,
 .capture-list,
-.log-panel {
+.log-panel,
+.tag-window {
   scrollbar-color: #98a48f #e1e8dd;
   scrollbar-width: thin;
 }
@@ -472,14 +623,16 @@ button:disabled {
 .ledger-table::-webkit-scrollbar,
 .event-list::-webkit-scrollbar,
 .capture-list::-webkit-scrollbar,
-.log-panel::-webkit-scrollbar {
+.log-panel::-webkit-scrollbar,
+.tag-window::-webkit-scrollbar {
   width: 10px;
 }
 
 .ledger-table::-webkit-scrollbar-track,
 .event-list::-webkit-scrollbar-track,
 .capture-list::-webkit-scrollbar-track,
-.log-panel::-webkit-scrollbar-track {
+.log-panel::-webkit-scrollbar-track,
+.tag-window::-webkit-scrollbar-track {
   background: #e1e8dd;
   border-radius: 999px;
 }
@@ -487,7 +640,8 @@ button:disabled {
 .ledger-table::-webkit-scrollbar-thumb,
 .event-list::-webkit-scrollbar-thumb,
 .capture-list::-webkit-scrollbar-thumb,
-.log-panel::-webkit-scrollbar-thumb {
+.log-panel::-webkit-scrollbar-thumb,
+.tag-window::-webkit-scrollbar-thumb {
   background: #98a48f;
   border-radius: 999px;
 }
@@ -576,6 +730,10 @@ button:disabled {
   .capture-grid {
     grid-template-columns: 1fr 1fr;
   }
+
+  .operation-grid.with-recognition {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -598,6 +756,12 @@ button:disabled {
   .capture-list,
   .metric-grid,
   .status-list {
+    grid-template-columns: 1fr;
+  }
+
+  .operation-grid.with-recognition,
+  .recognition-meta,
+  .detected-tag {
     grid-template-columns: 1fr;
   }
 

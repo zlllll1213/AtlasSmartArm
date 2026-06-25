@@ -9,14 +9,24 @@ import {
   Play,
   RefreshCw,
   Router,
+  ScanSearch,
   ShieldAlert,
   SquareX,
+  Tags,
   Terminal,
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { api } from './api/client'
-import type { CameraCapture, SystemEvent, SystemStatus, TaskDetail, TaskState } from './api/types'
+import type {
+  CameraCapture,
+  RecognitionCategory,
+  SystemEvent,
+  SystemStatus,
+  TaskDetail,
+  TaskRecognition,
+  TaskState,
+} from './api/types'
 import { useEventStream } from './hooks/useEventStream'
 import { usePolling } from './hooks/usePolling'
 import './styles.css'
@@ -41,6 +51,14 @@ const stateLabels: Record<TaskState, string> = {
   failed: '失败',
   cancelled: '已取消',
   paused: '暂停',
+}
+
+const recognitionCategoryLabels: Record<RecognitionCategory, string> = {
+  hazardous: '有害垃圾',
+  recyclable: '可回收物',
+  kitchen: '厨余垃圾',
+  other: '其他垃圾',
+  unknown: '未知类别',
 }
 
 function formatTime(value: string | null | undefined): string {
@@ -200,6 +218,7 @@ export default function App() {
             program="pick_sort_default"
             task={task}
             busy={busy}
+            showRecognition
             onStart={startPickSort}
             onCancel={cancelTask}
           />
@@ -253,17 +272,18 @@ interface OperationPanelProps {
   program: NonNullable<TaskDetail['program']>
   task: TaskDetail | null
   busy: boolean
+  showRecognition?: boolean
   onStart: () => void
   onCancel: () => void
 }
 
-function OperationPanel({ title, program, task, busy, onStart, onCancel }: OperationPanelProps) {
+function OperationPanel({ title, program, task, busy, showRecognition = false, onStart, onCancel }: OperationPanelProps) {
   const isCurrentProgram = task?.program === program || task?.program === null
   const visibleTask = isCurrentProgram ? task : null
   const active = visibleTask ? !['succeeded', 'failed', 'cancelled'].includes(visibleTask.state) : false
 
   return (
-    <section className="operation-grid">
+    <section className={`operation-grid ${showRecognition ? 'with-recognition' : ''}`}>
       <div className="command-surface">
         <div className="section-heading">
           <div>
@@ -290,8 +310,66 @@ function OperationPanel({ title, program, task, busy, onStart, onCancel }: Opera
           </button>
         </div>
       </div>
+      {showRecognition ? <RecognitionPanel recognition={visibleTask?.recognition ?? null} /> : null}
       <TaskInspector task={visibleTask} />
     </section>
+  )
+}
+
+function RecognitionPanel({ recognition }: { recognition: TaskRecognition | null }) {
+  const detections = recognition?.detections ?? []
+
+  return (
+    <div className="recognition-panel">
+      <div className="section-heading compact">
+        <div>
+          <span className="eyebrow">Recognition</span>
+          <h2>识别结果</h2>
+        </div>
+        <ScanSearch aria-hidden="true" size={20} />
+      </div>
+      {recognition ? (
+        <div className="recognition-content">
+          <div className="recognition-hero">
+            <span>最新标签</span>
+            <strong>{recognition.latest_label}</strong>
+            <em className={`category-chip ${recognition.latest_category}`}>
+              {recognitionCategoryLabels[recognition.latest_category]}
+            </em>
+          </div>
+          <div className="recognition-meta">
+            <Metric label="更新时间" value={formatTime(recognition.updated_at)} />
+            <Metric label="检测数量" value={String(detections.length)} />
+          </div>
+          <div className="tag-window" aria-label="识别标签列表">
+            {detections.map((detection, index) => (
+              <div className="detected-tag" key={`${detection.label}-${index}`}>
+                <div>
+                  <strong>{detection.label}</strong>
+                  <span>{recognitionCategoryLabels[detection.category]}</span>
+                </div>
+                <code>
+                  x {detection.x_m.toFixed(3)} · y {detection.y_m.toFixed(3)}
+                </code>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="recognition-empty">
+          <Tags aria-hidden="true" size={28} />
+          <strong>等待识别标签</strong>
+          <span>分拣程序输出标签后显示</span>
+        </div>
+      )}
+      <div className="category-legend" aria-label="标签说明">
+        {Object.entries(recognitionCategoryLabels).map(([category, label]) => (
+          <span className={`category-chip ${category}`} key={category}>
+            {label}
+          </span>
+        ))}
+      </div>
+    </div>
   )
 }
 

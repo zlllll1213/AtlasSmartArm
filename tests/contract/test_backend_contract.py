@@ -129,13 +129,15 @@ class FakeProgramHandle:
 
 
 class FakeProgramRunner:
-    def __init__(self, exit_code=None) -> None:
+    def __init__(self, exit_code=None, output_lines: list[str] | None = None) -> None:
         self.started: list[str] = []
         self.handle = FakeProgramHandle(exit_code=exit_code)
+        self.output_lines = output_lines or ["default program started"]
 
     def start(self, program, on_output):
         self.started.append(program)
-        on_output("default program started")
+        for line in self.output_lines:
+            on_output(line)
         return self.handle
 
 
@@ -346,6 +348,100 @@ def test_board_mode_program_output_is_published_as_event():
         "program": "pick_sort_default",
         "line": "default program started",
     }
+
+
+def test_board_mode_parses_pick_sort_recognition_from_default_program_output():
+    runner = FakeProgramRunner(
+        output_lines=[
+            "msg is: {'Book': (0.012, 0.321), 'Syringe': (-0.01, 0.4)}",
+        ]
+    )
+    app = create_app(Settings(program_mode="board"), program_runner=runner)
+    board_client = TestClient(app)
+
+    created = unwrap_ok(
+        board_client.post(
+            "/api/v1/tasks/pick-sort",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["Book"]},
+                "destination": {"type": "category_bin", "category": "power_fitting"},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        )
+    )
+    detail = unwrap_ok(board_client.get(f"/api/v1/tasks/{created['task_id']}"))
+    recognition_events = [
+        event for event in app.state.services.event_bus.latest(limit=10)
+        if event["type"] == "task.recognition.updated"
+    ]
+
+    assert detail["recognition"]["latest_label"] == "Book"
+    assert detail["recognition"]["latest_category"] == "recyclable"
+    assert detail["recognition"]["updated_at"].endswith("Z")
+    assert detail["recognition"]["detections"] == [
+        {
+            "label": "Book",
+            "category": "recyclable",
+            "x_m": 0.012,
+            "y_m": 0.321,
+            "source": "msg",
+        },
+        {
+            "label": "Syringe",
+            "category": "hazardous",
+            "x_m": -0.01,
+            "y_m": 0.4,
+            "source": "msg",
+        },
+    ]
+    assert recognition_events[-1]["data"]["recognition"]["latest_label"] == "Book"
+
+
+def test_board_mode_parses_sorted_recognition_output_and_unknown_labels():
+    runner = FakeProgramRunner(
+        output_lines=[
+            "new msg is [('Custom_object', (0.05, -0.02))]",
+        ]
+    )
+    board_client = TestClient(
+        create_app(Settings(program_mode="board"), program_runner=runner)
+    )
+
+    created = unwrap_ok(
+        board_client.post(
+            "/api/v1/tasks/pick-sort",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["Custom_object"]},
+                "destination": {"type": "category_bin", "category": "power_fitting"},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        )
+    )
+    detail = unwrap_ok(board_client.get(f"/api/v1/tasks/{created['task_id']}"))
+
+    assert detail["recognition"]["latest_label"] == "Custom_object"
+    assert detail["recognition"]["latest_category"] == "unknown"
+    assert detail["recognition"]["detections"][0]["source"] == "new_msg"
+
+
+def test_board_mode_unstructured_logs_do_not_create_fake_recognition():
+    board_client = TestClient(
+        create_app(Settings(program_mode="board"), program_runner=FakeProgramRunner())
+    )
+
+    created = unwrap_ok(
+        board_client.post(
+            "/api/v1/tasks/pick-sort",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["Book"]},
+                "destination": {"type": "category_bin", "category": "power_fitting"},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        )
+    )
+    detail = unwrap_ok(board_client.get(f"/api/v1/tasks/{created['task_id']}"))
+
+    assert detail["recognition"] is None
 
 
 def test_board_mode_default_program_does_not_mutate_inventory():

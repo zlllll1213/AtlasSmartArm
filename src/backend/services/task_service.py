@@ -8,6 +8,7 @@ from src.backend.models.schemas import PickSortRequest, StackRequest
 from src.backend.config import Settings
 from src.backend.services.board_program_runner import ProgramHandle, ProgramRunner
 from src.backend.services.event_bus import EventBus
+from src.backend.services.recognition_parser import parse_recognition_log
 from src.backend.time_utils import utc_now_iso
 from src.integration.task_fsm import TaskStateMachine
 
@@ -39,6 +40,7 @@ class TaskRecord:
     pid: int | None = None
     exit_code: int | None = None
     logs: list[str] = field(default_factory=list)
+    recognition: dict[str, object] | None = None
     started_at: str | None = None
     ended_at: str | None = None
     handle: ProgramHandle | None = None
@@ -57,6 +59,7 @@ class TaskRecord:
             "pid": self.pid,
             "exit_code": self.exit_code,
             "logs": self.logs,
+            "recognition": self.recognition,
             "started_at": self.started_at,
             "ended_at": self.ended_at,
         }
@@ -232,10 +235,35 @@ class TaskService:
                 "task.log.created",
                 {"task_id": task.task_id, "program": task.program, "line": line},
             )
+            self._remember_recognition_from_log(task, line)
 
         task.handle = self.program_runner.start(program, remember_log)
         task.pid = task.handle.pid
         task.updated_at = utc_now_iso()
+
+    def _remember_recognition_from_log(self, task: TaskRecord, line: str) -> None:
+        if task.type != TaskType.pick_sort:
+            return
+        detections = parse_recognition_log(line)
+        if not detections:
+            return
+        updated_at = utc_now_iso()
+        latest = detections[0]
+        task.recognition = {
+            "latest_label": latest["label"],
+            "latest_category": latest["category"],
+            "detections": detections,
+            "updated_at": updated_at,
+        }
+        task.updated_at = updated_at
+        self.event_bus.publish(
+            "task.recognition.updated",
+            {
+                "task_id": task.task_id,
+                "program": task.program,
+                "recognition": task.recognition,
+            },
+        )
 
     def _advance_for_board(self, task: TaskRecord) -> None:
         if task.handle is None or task.fsm.state in {
