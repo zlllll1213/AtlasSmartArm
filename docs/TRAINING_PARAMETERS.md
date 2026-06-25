@@ -1,13 +1,14 @@
 # 模型训练参数记录
 
-版本：v0.1  
-日期：2026-06-25  
-对应文档：[MODEL_TRAINING.md](MODEL_TRAINING.md)  
-适用模型：16 类垃圾检测 YOLOv5s -> ONNX -> Ascend OM
+- 版本：v0.1
+- 日期：2026-06-25
+- 对应文档：[MODEL_TRAINING.md](MODEL_TRAINING.md)
+- 适用模型：16 类垃圾检测 YOLOv5s -> ONNX -> Ascend OM
 
 ## 1. 本文用途
 
-本文只记录本次实际训练、导出、转换用到的具体参数。  
+本文只记录本次实际训练、导出、转换用到的具体参数。
+
 完整流程说明见 [MODEL_TRAINING.md](MODEL_TRAINING.md)。
 
 ## 2. 训练环境参数
